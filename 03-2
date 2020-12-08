@@ -1,0 +1,83 @@
+#!/usr/bin/env python
+from dataclasses import dataclass
+
+
+@dataclass
+class Coords:
+    x: int
+    y: int
+
+
+grid = """..##.......
+#...#...#..
+.#....#..#.
+..#.#...#.#
+.#...##..#.
+..#.##.....
+.#.#.#....#
+.#........#
+#.##...#...
+#...##....#
+.#..#...#.#""".splitlines()
+slopes = """1, -1
+3, -1
+5, -1
+7, -1
+1, -2""".splitlines()
+
+grid = slopes = None
+
+if not grid:
+    items = []
+    print("Enter the grid: ")
+    while True:
+        try:
+            line = input().strip()
+            if line:
+                items.append(line)
+            else:
+                break
+        except (EOFError):
+            break
+    grid = items
+
+if not slopes:
+    slopes = []
+    print("Enter the slopes like: 1, -1 ")
+    while True:
+        try:
+            line = input().strip()
+            if line:
+                slopes.append(line)
+            else:
+                break
+        except (EOFError):
+            break
+
+slopes = [Coords(*[int(i) for i in line.split(", ")]) for line in slopes]
+grid = list(reversed(grid))
+
+lines = len(grid)
+
+
+start = Coords(0, lines - 1)
+
+product = 1
+for slope in slopes:
+    print("\nProcessing slope %s" % slope)
+
+    position = Coords(start.x, start.y)
+    trees = 0
+    print("starting at %s" % position)
+    while position.y > 0:
+        position.x += slope.x
+        position.x = position.x % len(grid[0])  # repeat grid horizontally
+        position.y += slope.y
+        result = "tree" if grid[position.y][position.x] == "#" else "open"
+        print("moved to %s, a %s" % (position, result))
+        trees += result == "tree"
+
+    print("Hit trees: {}".format(trees))
+    product *= trees
+
+print("\nHit trees product: {}".format(product))

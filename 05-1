@@ -1,0 +1,75 @@
+#!/usr/bin/env python
+import doctest
+
+data = """BFFFBBFRRR
+FFFBBBFRRR
+BBFFBBFRLL""".splitlines()
+
+data = None
+
+
+def seat_id(row, column):
+    """0-indexed
+
+    >>> seat_id(8, 4)
+    68
+    >>> seat_id(0, 0)
+    0
+    """
+    return row * 8 + column
+
+
+def row(code):
+    """
+    >>> row("FBFBBFF")
+    44
+    >>> row("BFFFBBF")
+    70
+    >>> row("FFFBBBF")
+    14
+    >>> row("BBFFBBF")
+    102
+    """
+    binary = code.replace("F", "0").replace("B", "1")
+    return int(binary, 2)
+
+
+def column(code):
+    """
+    >>> column("RLR")
+    5
+    >>> column("RRR")
+    7
+    """
+    binary = code.replace("L", "0").replace("R", "1")
+    return int(binary, 2)
+
+
+def seat_ids(data):
+    r"""
+    >>> data = "BFFFBBFRRR\nFFFBBBFRRR\nBBFFBBFRLL".splitlines()
+    >>> list(seat_ids(data))
+    [567, 119, 820]
+    """
+    for code in data:
+        seat = {"row": row(code[:7]), "column": column(code[7:])}
+        yield seat_id(**seat)
+
+doctest.testmod()
+
+if not data:
+    lines = []
+    print("Enter the data: ")
+    while True:
+        try:
+            line = input().strip()
+            if line:
+                lines.append(line)
+            else:
+                break
+        except (EOFError):
+            break
+    data = lines
+
+
+print("Highest: {}".format(max(seat_ids(data))))

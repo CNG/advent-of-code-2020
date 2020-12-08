@@ -1,0 +1,24 @@
+#!/usr/bin/env python
+
+items = []
+while True:
+    try:
+        line = input()
+        items.append(int(line.strip()))
+    except (EOFError, ValueError):
+        break
+
+# items = [1721, 979, 366, 299, 675, 1456]
+
+
+def pairs(items):
+    for i, item_1 in enumerate(items):
+        for j, item_2 in enumerate(items):
+            if i != j:
+                yield item_1, item_2
+
+
+for item_1, item_2 in pairs(items):
+    if item_1 + item_2 == 2020:
+        print(item_1 * item_2)
+        break

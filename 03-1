@@ -1,0 +1,57 @@
+#!/usr/bin/env python
+from dataclasses import dataclass
+
+grid = """..##.......
+#...#...#..
+.#....#..#.
+..#.#...#.#
+.#...##..#.
+..#.##.....
+.#.#.#....#
+.#........#
+#.##...#...
+#...##....#
+.#..#...#.#""".splitlines()
+
+grid = None
+
+if not grid:
+    items = []
+    while True:
+        try:
+            line = input().strip()
+            if line:
+                items.append(line)
+            else:
+                break
+        except (EOFError):
+            break
+    grid = items
+
+grid = list(reversed(grid))
+
+lines = len(grid)
+
+
+@dataclass
+class Coords:
+    x: int
+    y: int
+
+
+start = Coords(0, lines - 1)
+slope = Coords(3, -1)
+position = Coords(start.x, start.y)
+
+trees = 0
+
+print("starting at %s" % position)
+while position.y > 0:
+    position.x += slope.x
+    position.x = position.x % len(grid[0])  # repeat grid horizontally
+    position.y += slope.y
+    result = "tree" if grid[position.y][position.x] == "#" else "open"
+    print("moved to %s, a %s" % (position, result))
+    trees += result == "tree"
+
+print("Hit trees: {}".format(trees))

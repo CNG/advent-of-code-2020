@@ -1,0 +1,104 @@
+#!/usr/bin/env python
+import re
+
+class Passport:
+    def __init__(self, **fields):
+
+        # byr (Birth Year) - four digits; at least 1920 and at most 2002.
+        assert len(fields["byr"]) == 4 and 1920 <= int(fields["byr"]) <= 2002
+
+        # iyr (Issue Year) - four digits; at least 2010 and at most 2020.
+        assert len(fields["iyr"]) == 4 and 2010 <= int(fields["iyr"]) <= 2020
+
+        # eyr (Expiration Year) - four digits; at least 2020 and at most 2030.
+        assert len(fields["eyr"]) == 4 and 2020 <= int(fields["eyr"]) <= 2030
+
+        # hgt (Height) - a number followed by either cm or in:
+        #     If cm, the number must be at least 150 and at most 193.
+        #     If in, the number must be at least 59 and at most 76.
+        match = re.match("^(?P<qty>\d+)(?P<unit>cm|in)$", fields["hgt"])
+        qty, unit = int(match.group("qty")), match.group("unit")
+        if unit == "cm":
+            assert 150 <= qty <= 193
+        elif unit == "in":
+            assert 59 <= qty <= 76
+        else:
+            assert False
+
+        # hcl (Hair Color) - a # followed by exactly six characters 0-9 or a-f.
+        assert re.match("^#[0-9a-f]{6}$", fields["hcl"])
+
+        # ecl (Eye Color) - exactly one of: amb blu brn gry grn hzl oth.
+        assert re.match("^(?:amb|blu|brn|gry|grn|hzl|oth)$", fields["ecl"])
+
+        # pid (Passport ID) - a nine-digit number, including leading zeroes.
+        assert re.match("^[0-9]{9}$", fields["pid"])
+
+        # cid (Country ID) - ignored, missing or not.
+
+        self.__dict__ = fields
+
+
+data = """ecl:gry pid:860033327 eyr:2020 hcl:#fffffd
+byr:1937 iyr:2017 cid:147 hgt:183cm
+
+iyr:2013 ecl:amb cid:350 eyr:2023 pid:028048884
+hcl:#cfa07d byr:1929
+
+hcl:#ae17e1 iyr:2013
+eyr:2024
+ecl:brn pid:760753108 byr:1931
+hgt:179cm
+
+hcl:#cfa07d eyr:2025 pid:166559648
+iyr:2011 ecl:brn hgt:59in
+""".splitlines()
+
+data = None
+
+if not data:
+    lines = []
+    print("Enter the data: ")
+    # We need to allow a single blank line here...
+    # maybe should have gone with shell arguments...
+    blanks_in_seq = 0
+    while True:
+        try:
+            line = input().strip()
+            if line:
+                lines.append(line)
+                blanks_in_seq = 0
+            elif blanks_in_seq == 0:
+                lines.append(line)
+                blanks_in_seq += 1
+            else:
+                break
+        except (EOFError):
+            break
+    data = lines
+
+
+def passport_lines(data):
+    partial_lines = []
+    for line in data:
+        # print(line)
+        if line:
+            partial_lines.append(line)
+        else:
+            yield " ".join(partial_lines)
+            partial_lines = []
+    if len(partial_lines):  # ignore blank line at end
+        yield " ".join(partial_lines)
+
+
+def is_valid(passport_line):
+    fields = dict([pair.split(":") for pair in passport_line.split()])
+    try:
+        Passport(**fields)
+    except (KeyError, AssertionError, AttributeError) as e:
+        return False
+    else:
+        return True
+
+
+print(sum(is_valid(passport) for passport in passport_lines(data)))

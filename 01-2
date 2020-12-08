@@ -1,0 +1,30 @@
+#!/usr/bin/env python
+
+items = []
+while True:
+    try:
+        line = input()
+        items.append(int(line.strip()))
+    except (EOFError, ValueError):
+        break
+
+
+def pairs(items):
+    for i, item_1 in enumerate(items):
+        for j, item_2 in enumerate(items):
+            if i != j:
+                yield item_1, item_2
+
+
+def triplets(items):
+    for i, item_1 in enumerate(items):
+        for j, item_2 in enumerate(items):
+            for k, item_3 in enumerate(items):
+                if len(set([i, j, k])) == 3:
+                    yield item_1, item_2, item_3
+
+
+for item_1, item_2, item_3 in triplets(items):
+    if item_1 + item_2 + item_3 == 2020:
+        print(item_1 * item_2 * item_3)
+        break
