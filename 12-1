@@ -9,46 +9,55 @@ class Ship:
     y = 0
     heading = 90  # east
 
-    def command(self, code):
-        action, value = code[0], int(code[1:])
-        if action == "N":
-            self.y += value
-        elif action == "S":
-            self.y -= value
-        elif action == "E":
-            self.x += value
-        elif action == "W":
-            self.x -= value
-        elif action == "L":
+    def __init__(self, instructions=None):
+        if instructions:
+            self.instructions(instructions)
+
+    @property
+    def manhattan_distance(self):
+        return abs(self.x) + abs(self.y)
+
+    def instructions(self, text):
+        for line in text.splitlines():
+            self.command(action=line[0], value=int(line[1:]))
+
+    def command(self, action, value):
+        def left(value):
             self.heading -= value
             self.heading %= 360
-        elif action == "R":
+            return self.x, self.y, self.heading
+
+        def right(value):
             self.heading += value
             self.heading %= 360
-        elif action == "F":
+            return self.x, self.y, self.heading
+
+        def forward(value):
             if self.heading == 0:
-                self.command("N" + str(value))
+                self.command("N", value)
             elif self.heading == 90:
-                self.command("E" + str(value))
+                self.command("E", value)
             elif self.heading == 180:
-                self.command("S" + str(value))
+                self.command("S", value)
             elif self.heading == 270:
-                self.command("W" + str(value))
+                self.command("W", value)
+            return self.x, self.y, self.heading
+
+        self.x, self.y, self.heading = {
+            "E": lambda value: (self.x + value, self.y, self.heading),
+            "S": lambda value: (self.x, self.y - value, self.heading),
+            "W": lambda value: (self.x - value, self.y, self.heading),
+            "N": lambda value: (self.x, self.y + value, self.heading),
+            "L": left,
+            "R": right,
+            "F": forward,
+        }[action](value)
         return self.x, self.y, self.heading
 
 
 def main(data):
-    ship = Ship()
-    for line in data[0].splitlines():
-        x, y, heading = ship.command(line)
-        print(f"x {x}, y {y}, heading {heading} -- Manhattan distance: {abs(x)+abs(y)}")
-        # 25
-    print()
-    ship = Ship()
-    for line in data[1].splitlines():
-        x, y, heading = ship.command(line)
-        print(f"x {x}, y {y}, heading {heading} -- Manhattan distance: {abs(x)+abs(y)}")
-        # 1589
+    assert 25 == Ship(instructions=data[0]).manhattan_distance
+    print(Ship(instructions=data[1]).manhattan_distance)
 
 
 data = []

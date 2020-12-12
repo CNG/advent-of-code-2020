@@ -1,59 +1,66 @@
 #!/usr/bin/env python
-from collections import Counter
 import doctest
-import re
 
 
 class Ship:
     x = 0
     y = 0
-    waypoint_x = 10
-    waypoint_y = 1
+    wp_x = 10
+    wp_y = 1
 
-    def command(self, code):
-        action, value = code[0], int(code[1:])
-        if action == "N":
-            self.waypoint_y += value
-        elif action == "S":
-            self.waypoint_y -= value
-        elif action == "E":
-            self.waypoint_x += value
-        elif action == "W":
-            self.waypoint_x -= value
-        elif action == "L":
+    def __init__(self, instructions=None):
+        if instructions:
+            self.instructions(instructions)
+
+    @property
+    def manhattan_distance(self):
+        return abs(self.x) + abs(self.y)
+
+    def instructions(self, text):
+        for line in text.splitlines():
+            self.command(action=line[0], value=int(line[1:]))
+
+    def command(self, action, value):
+        def left(value):
             if value == 180:
-                self.waypoint_x *= -1
-                self.waypoint_y *= -1
+                self.wp_x *= -1
+                self.wp_y *= -1
             elif value == 90:
-                self.waypoint_x, self.waypoint_y = -self.waypoint_y, self.waypoint_x
+                self.wp_x, self.wp_y = -self.wp_y, self.wp_x
             elif value == 270:  # 10, 4 -> 4, -10
-                self.waypoint_x, self.waypoint_y = self.waypoint_y, -self.waypoint_x
-        elif action == "R":
+                self.wp_x, self.wp_y = self.wp_y, -self.wp_x
+            return self.x, self.y, self.wp_x, self.wp_y
+
+        def right(value):
             if value == 180:
-                self.waypoint_x *= -1
-                self.waypoint_y *= -1
+                return left(value)
             elif value == 90:
-                self.waypoint_x, self.waypoint_y = self.waypoint_y, -self.waypoint_x
+                return left(270)
             elif value == 270:
-                self.waypoint_x, self.waypoint_y = -self.waypoint_y, self.waypoint_x
-        elif action == "F":
-            self.x += value * self.waypoint_x
-            self.y += value * self.waypoint_y
-        return (self.x, self.y), (self.waypoint_x, self.waypoint_y)
+                return left(90)
+
+        def forward(value):
+            self.x += value * self.wp_x
+            self.y += value * self.wp_y
+            return self.x, self.y, self.wp_x, self.wp_y
+
+        x, y, wp_x, wp_y = self.x, self.y, self.wp_x, self.wp_y
+        self.x, self.y, self.wp_x, self.wp_y = {
+            "E": lambda value: (x, y, wp_x + value, wp_y),
+            "S": lambda value: (x, y, wp_x, wp_y - value),
+            "W": lambda value: (x, y, wp_x - value, wp_y),
+            "N": lambda value: (x, y, wp_x, wp_y + value),
+            "L": left,
+            "R": right,
+            "F": forward,
+        }[action](value)
+
+        return (self.x, self.y), (self.wp_x, self.wp_y)
 
 
 def main(data):
-    ship = Ship()
-    for line in data[0].splitlines():
-        (x, y), (wx, wy) = ship.command(line)
-        print(f"({x}, {y}) -> ({wx}, {wy}) -- Manhattan distance: {abs(x)+abs(y)}")
-        # 286
-    print()
-    ship = Ship()
-    for line in data[1].splitlines():
-        (x, y), (wx, wy) = ship.command(line)
-        print(f"({x}, {y}) -> ({wx}, {wy}) -- Manhattan distance: {abs(x)+abs(y)}")
-        # 23960
+    assert 286 == Ship(instructions=data[0]).manhattan_distance
+    print(Ship(instructions=data[1]).manhattan_distance)
 
 
 data = []
