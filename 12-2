@@ -5,8 +5,6 @@ import doctest
 class Ship:
     x = 0
     y = 0
-    wp_x = 10
-    wp_y = 1
 
     def __init__(self, instructions=None):
         if instructions:
@@ -19,6 +17,48 @@ class Ship:
     def instructions(self, text):
         for line in text.splitlines():
             self.command(action=line[0], value=int(line[1:]))
+
+
+class HeadingShip(Ship):
+    heading = 90  # east
+
+    def command(self, action, value):
+        def left(value):
+            self.heading -= value
+            self.heading %= 360
+            return self.x, self.y, self.heading
+
+        def right(value):
+            self.heading += value
+            self.heading %= 360
+            return self.x, self.y, self.heading
+
+        def forward(value):
+            if self.heading == 0:
+                self.command("N", value)
+            elif self.heading == 90:
+                self.command("E", value)
+            elif self.heading == 180:
+                self.command("S", value)
+            elif self.heading == 270:
+                self.command("W", value)
+            return self.x, self.y, self.heading
+
+        self.x, self.y, self.heading = {
+            "E": lambda value: (self.x + value, self.y, self.heading),
+            "S": lambda value: (self.x, self.y - value, self.heading),
+            "W": lambda value: (self.x - value, self.y, self.heading),
+            "N": lambda value: (self.x, self.y + value, self.heading),
+            "L": left,
+            "R": right,
+            "F": forward,
+        }[action](value)
+        return self.x, self.y, self.heading
+
+
+class WaypointShip(Ship):
+    wp_x = 10
+    wp_y = 1
 
     def command(self, action, value):
         def left(value):
@@ -54,13 +94,17 @@ class Ship:
             "R": right,
             "F": forward,
         }[action](value)
-
         return (self.x, self.y), (self.wp_x, self.wp_y)
 
 
 def main(data):
-    assert 286 == Ship(instructions=data[0]).manhattan_distance
-    print(Ship(instructions=data[1]).manhattan_distance)
+    print("Part One")
+    assert 25 == HeadingShip(instructions=data[0]).manhattan_distance
+    print(HeadingShip(instructions=data[1]).manhattan_distance)
+
+    print("Part Two")
+    assert 286 == WaypointShip(instructions=data[0]).manhattan_distance
+    print(WaypointShip(instructions=data[1]).manhattan_distance)
 
 
 data = []
