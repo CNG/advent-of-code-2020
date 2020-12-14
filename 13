@@ -1,0 +1,158 @@
+#!/usr/bin/env python
+import doctest
+from math import lcm as least_common_multiple
+
+# Part One
+
+
+def deserialize_1(data):
+    r"""
+    >>> deserialize_1("939\n7,13,x,x,59,x,31,19")
+    (939, [7, 13, 59, 31, 19])
+    """
+    earliest_trip, bus_ids = data.splitlines()
+    earliest_trip = int(earliest_trip)
+    bus_ids = [int(bus_id) for bus_id in bus_ids.split(",") if bus_id != "x"]
+    # print(f"{earliest_trip} {bus_ids}")
+    return earliest_trip, bus_ids
+
+
+def bus_and_wait(earliest_trip, buses):
+    """
+    Return tuple of:
+    * bus id
+    * wait time between earliest_trip and next bus departure
+    >>> bus_and_wait(939, [7, 13, 59, 31, 19])
+    (59, 5)
+    """
+    return sorted(
+        {bus: bus - earliest_trip % bus for bus in buses}.items(),
+        key=lambda x: x[1],
+        reverse=True,
+    ).pop()
+
+
+def compute_1(data):
+    earliest_trip, bus_ids = deserialize_1(data)
+    bus_id, wait = bus_and_wait(earliest_trip, bus_ids)
+    return wait * bus_id
+
+
+# Part Two
+
+
+def deserialize_2(data):
+    r"""
+    >>> deserialize_2("939\n7,13,x,x,59,x,31,19")
+    [7, 13, None, None, 59, None, 31, 19]
+    """
+    earliest_trip, bus_ids = data.splitlines()
+    bus_ids = [None if bus_id == "x" else int(bus_id) for bus_id in bus_ids.split(",")]
+    return bus_ids
+
+
+# no longer used
+def compute_2(data):
+    """This is my first brute force computationally bad approach."""
+
+    def offset_schedules(maybe_buses):
+        def offset_schedule(bus, offset):
+            cycle = 0
+            while cycle < 1000000:  # ugh! let's restructure this
+                yield bus * cycle - offset
+                cycle += 1
+
+        schedules = []
+        for slot, maybe_bus in enumerate(maybe_buses):
+            if maybe_bus:
+                bus = maybe_bus
+                schedules.append(set(x for x in offset_schedule(bus, offset=slot)))
+        return schedules
+
+    maybe_buses = deserialize_2(data)
+    schedules = offset_schedules(maybe_buses)
+    return min(set.intersection(*schedules))
+
+
+def matches_offset_timestamp(bus, offset, ts):
+    """
+    >>> matches_offset_timestamp(7, 0, 14)
+    True
+    >>> matches_offset_timestamp(7, 0, 1068781)
+    True
+    >>> matches_offset_timestamp(13, 1, 1068781)
+    True
+    >>> matches_offset_timestamp(59, 4, 1068781)
+    True
+    >>> matches_offset_timestamp(31, 6, 1068781)
+    True
+    >>> matches_offset_timestamp(19, 7, 1068781)
+    True
+    """
+    # if bus != 607:
+    #     print(f"bus {bus} slot {offset} hoped_min {ts}")
+    return (ts + offset) % bus == 0
+
+
+def sorted_buses(maybe_buses):
+    """
+    >>> sorted_buses([7, 13, None, None, 59, None, 31, 19])
+    [{'id': 59, 'offset': 4}, {'id': 31, 'offset': 6}, {'id': 19, 'offset': 7}, {'id': 13, 'offset': 1}, {'id': 7, 'offset': 0}]
+    """
+    buses = [
+        {"id": bus, "offset": offset} for offset, bus in enumerate(maybe_buses) if bus
+    ]
+    return sorted(buses, key=lambda bus: bus["id"], reverse=True)
+
+
+def first_ts(buses, starting_ts=0):
+    r"""
+    >>> buses = [{'id': 59, 'offset': 4}, {'id': 31, 'offset': 6}, {'id': 19, 'offset': 7}, {'id': 13, 'offset': 1}, {'id': 7, 'offset': 0}]
+    >>> first_ts(buses)
+    1068781
+    """
+    lcm = least_common_multiple(*(bus["id"] for bus in buses))
+    print(f"lcm {lcm}")
+    ts = starting_ts + (buses[0]["id"] - starting_ts % buses[0]["id"]) - buses[0]["offset"]
+    ts = starting_ts + (lcm - starting_ts % lcm) - buses[0]["offset"]
+    while True:
+        ts += lcm
+        if all(matches_offset_timestamp(bus["id"], bus["offset"], ts) for bus in buses):
+            return ts
+
+
+def compute_3(data, starting_ts=0):
+    maybe_buses = deserialize_2(data)
+    buses = sorted_buses(maybe_buses)
+    return first_ts(buses, starting_ts)
+
+
+def main(data):
+    assert 295 == compute_1(data[0])
+    print("Part One")
+    print(compute_1(data[1]))
+
+    # assert 1068781 == compute_2(data[0])
+    assert 1068781 == compute_3(data[0])
+    assert 3417 == compute_3("\n17,x,13,19")
+    assert 754018 == compute_3("\n67,7,59,61")
+    assert 779210 == compute_3("\n67,x,7,59,61")
+    assert 1261476 == compute_3("\n67,7,x,59,61")
+    assert 1202161486 == compute_3("\n1789,37,47,1889")
+    print("Part Two")
+    print(compute_3(data[1], starting_ts=100_000_000_000_000))
+
+
+data = []
+data.append(
+    """939
+7,13,x,x,59,x,31,19"""
+)
+data.append(
+    """1006401
+17,x,x,x,x,x,x,x,x,x,x,37,x,x,x,x,x,449,x,x,x,x,x,x,x,23,x,x,x,x,13,x,x,x,x,x,19,x,x,x,x,x,x,x,x,x,x,x,607,x,x,x,x,x,x,x,x,x,41,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,29"""
+)
+
+if __name__ == "__main__":
+    doctest.testmod()
+    main(data)
