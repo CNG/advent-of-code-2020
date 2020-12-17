@@ -1,0 +1,174 @@
+#!/usr/bin/env python
+import copy
+import doctest
+import logging
+import sys
+
+
+log = logging.getLogger(__name__).debug
+
+# Part One
+
+
+def neighbors(grid, point):
+    r"""
+    >>> grid = {(1, 2, 0), (0, 2, 0), (2, 1, 0), (1, 0, 0), (2, 2, 0)}
+    >>> neighbors(grid, (1, 1, 0))
+    {(1, 2, 0), (0, 2, 0), (2, 1, 0), (1, 0, 0), (2, 2, 0)}
+    """
+    x, y, z = point
+    return set(
+        (x2, y2, z2)
+        for x2 in range(x - 1, x + 2)
+        for y2 in range(y - 1, y + 2)
+        for z2 in range(z - 1, z + 2)
+        if (x2, y2, z2) in grid and (x2, y2, z2) != (x, y, z)
+    )
+
+
+class Grid3:
+    def __init__(self, initial_state):
+        self.state = initial_state
+
+    @classmethod
+    def from_2D_string(cls, grid):
+        return cls(
+            set(
+                (x, y, 0)
+                for y, line in enumerate(grid.splitlines())
+                for x, char in enumerate(line)
+                if char == "#"
+            )
+        )
+
+    def advance(self, count=1):
+        for _ in range(count):
+            x_min = min(x for x, y, z in self.state) - 1
+            x_max = max(x for x, y, z in self.state) + 1
+            y_min = min(y for x, y, z in self.state) - 1
+            y_max = max(y for x, y, z in self.state) + 1
+            z_min = min(z for x, y, z in self.state) - 1
+            z_max = max(z for x, y, z in self.state) + 1
+            old_state = copy.deepcopy(self.state)
+            new_state = self.state
+            for x in range(x_min, x_max + 1):
+                for y in range(y_min, y_max + 1):
+                    for z in range(z_min, z_max + 1):
+                        point = (x, y, z)
+                        active_neighbors = len(neighbors(old_state, point))
+                        is_active = point in old_state
+                        if is_active and active_neighbors not in (2, 3):
+                            new_state.remove(point)
+                        elif not is_active and active_neighbors == 3:
+                            new_state.add(point)
+            log(self.state)
+
+    @property
+    def num_active(self):
+        return len(self.state)
+
+
+def run(data, cycles):
+    grid = Grid3.from_2D_string(data)
+    grid.advance(cycles)
+    return grid.num_active
+
+
+# Part Two
+
+
+def neighbors_2(grid, point):
+    r"""
+    >>> grid = {(1, 2, 0), (0, 2, 0), (2, 1, 0), (1, 0, 0), (2, 2, 0)}
+    >>> neighbors(grid, (1, 1, 0))
+    {(1, 2, 0), (0, 2, 0), (2, 1, 0), (1, 0, 0), (2, 2, 0)}
+    """
+    x, y, z, w = point
+    return set(
+        (x2, y2, z2, w2)
+        for x2 in range(x - 1, x + 2)
+        for y2 in range(y - 1, y + 2)
+        for z2 in range(z - 1, z + 2)
+        for w2 in range(w - 1, w + 2)
+        if (x2, y2, z2, w2) in grid and (x2, y2, z2, w2) != (x, y, z, w)
+    )
+
+
+class Grid4(Grid3):
+    @classmethod
+    def from_2D_string(cls, grid):
+        return cls(
+            set(
+                (x, y, 0, 0)
+                for y, line in enumerate(grid.splitlines())
+                for x, char in enumerate(line)
+                if char == "#"
+            )
+        )
+
+    def advance(self, count=1):
+        for _ in range(count):
+            x_min = min(x for x, y, z, w in self.state) - 1
+            x_max = max(x for x, y, z, w in self.state) + 1
+            y_min = min(y for x, y, z, w in self.state) - 1
+            y_max = max(y for x, y, z, w in self.state) + 1
+            z_min = min(z for x, y, z, w in self.state) - 1
+            z_max = max(z for x, y, z, w in self.state) + 1
+            w_min = min(w for x, y, z, w in self.state) - 1
+            w_max = max(w for x, y, z, w in self.state) + 1
+            old_state = copy.deepcopy(self.state)
+            new_state = self.state
+            for x in range(x_min, x_max + 1):
+                for y in range(y_min, y_max + 1):
+                    for z in range(z_min, z_max + 1):
+                        for w in range(w_min, w_max + 1):
+                            point = (x, y, z, w)
+                            active_neighbors = len(neighbors_2(old_state, point))
+                            is_active = point in old_state
+                            if is_active and active_neighbors not in (2, 3):
+                                new_state.remove(point)
+                            elif not is_active and active_neighbors == 3:
+                                new_state.add(point)
+            log(self.state)
+
+
+def run_2(data, cycles):
+    grid = Grid4.from_2D_string(data)
+    grid.advance(cycles)
+    return grid.num_active
+
+
+def main():
+    print("Part One")
+    assert 112 == run(data[0], cycles=6)
+    print(run(data[1], cycles=6))
+
+    print("Part Two")
+    assert 848 == run_2(data[0], cycles=6)
+    print(run_2(data[1], cycles=6))
+
+
+data = []
+data.append(
+    """.#.
+..#
+###"""
+)
+data.append(
+    """.##.####
+.#.....#
+#.###.##
+#####.##
+#...##.#
+#######.
+##.#####
+.##...#.
+"""
+)
+
+
+if __name__ == "__main__":
+    doctest.testmod(verbose=False)
+    if len(sys.argv) > 1 and sys.argv[1] in ("-v", "--verbose"):
+        logging.basicConfig(level=logging.DEBUG)
+    main()
