@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import doctest
-from math import lcm as least_common_multiple
+from math import prod
 
 # Part One
 
@@ -97,34 +97,44 @@ def matches_offset_timestamp(bus, offset, ts):
 def sorted_buses(maybe_buses):
     """
     >>> sorted_buses([7, 13, None, None, 59, None, 31, 19])
+    [{'id': 7, 'offset': 0}, {'id': 13, 'offset': 1}, {'id': 59, 'offset': 4}, {'id': 31, 'offset': 6}, {'id': 19, 'offset': 7}]
+
     [{'id': 59, 'offset': 4}, {'id': 31, 'offset': 6}, {'id': 19, 'offset': 7}, {'id': 13, 'offset': 1}, {'id': 7, 'offset': 0}]
     """
     buses = [
         {"id": bus, "offset": offset} for offset, bus in enumerate(maybe_buses) if bus
     ]
+    return buses
     return sorted(buses, key=lambda bus: bus["id"], reverse=True)
 
 
-def first_ts(buses, starting_ts=0):
+def first_ts(buses):
     r"""
     >>> buses = [{'id': 59, 'offset': 4}, {'id': 31, 'offset': 6}, {'id': 19, 'offset': 7}, {'id': 13, 'offset': 1}, {'id': 7, 'offset': 0}]
     >>> first_ts(buses)
     1068781
     """
-    lcm = least_common_multiple(*(bus["id"] for bus in buses))
-    print(f"lcm {lcm}")
-    ts = starting_ts + (buses[0]["id"] - starting_ts % buses[0]["id"]) - buses[0]["offset"]
-    ts = starting_ts + (lcm - starting_ts % lcm) - buses[0]["offset"]
-    while True:
-        ts += lcm
-        if all(matches_offset_timestamp(bus["id"], bus["offset"], ts) for bus in buses):
-            return ts
+    ts = 0
+    increment_index = 0
+    for increment_index in range(len(buses)):
+        while True:
+            ts += prod(buses[i]["id"] for i in range(increment_index))
+            if all(
+                matches_offset_timestamp(bus["id"], bus["offset"], ts) for bus in buses
+            ):
+                return ts
+            if all(
+                matches_offset_timestamp(bus["id"], bus["offset"], ts)
+                for bus in buses[: increment_index + 1]
+            ):
+                # We found a repeating chunk, break from while to increase increment.
+                break
 
 
-def compute_3(data, starting_ts=0):
+def compute_3(data):
     maybe_buses = deserialize_2(data)
     buses = sorted_buses(maybe_buses)
-    return first_ts(buses, starting_ts)
+    return first_ts(buses)
 
 
 def main(data):
@@ -132,6 +142,7 @@ def main(data):
     print("Part One")
     print(compute_1(data[1]))
 
+    print("Part Two")
     # assert 1068781 == compute_2(data[0])
     assert 1068781 == compute_3(data[0])
     assert 3417 == compute_3("\n17,x,13,19")
@@ -139,8 +150,7 @@ def main(data):
     assert 779210 == compute_3("\n67,x,7,59,61")
     assert 1261476 == compute_3("\n67,7,x,59,61")
     assert 1202161486 == compute_3("\n1789,37,47,1889")
-    print("Part Two")
-    print(compute_3(data[1], starting_ts=100_000_000_000_000))
+    print(compute_3(data[1]))
 
 
 data = []
