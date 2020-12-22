@@ -3,70 +3,83 @@ import doctest
 import logging
 import re
 import sys
-from itertools import product
-from collections import defaultdict
 
 
 log = logging.getLogger(__name__).debug
 
 
-def main():
-    print("Part One")
-    # assert set(['trh', 'nhms', 'sbzzf', 'kfcds']) == clean_ingredients(data[0])
-    assert 5 == clean_ingredients(data[0])
-    print(clean_ingredients(data[1]))
-
-    print("Part Two")
-    # Ran out of steam, it's been a long weekend.
-    assert "mxmxvkd,sqjhc,fvjkl" == dirty_ingredients(data[0])
-
 # Part One
 
-def intersections(sets):
-    result = set(sets[0])
-    for s in sets[1:]:
-        result.intersection_update(s)
+
+def part_one():
+    print("Part One")
+    assert 5 == len(surely_clean(data[0]))
+    print(len(surely_clean(data[1])))
+
+
+def load(data):
+    food_regex = re.compile(r"(?P<ingredients>.*?) \(contains (?P<allergens>.*)\)")
+    for food in data.splitlines():
+        ingredients, allergens = food_regex.match(food).groups()
+        yield ingredients.split(), allergens.split(", ")
+
+
+def maybe_dirty_by_allergen(data):
+    result = {}
+    for ingredients, allergens in load(data):
+        for allergen in allergens:
+            if allergen not in result:
+                result[allergen] = set(ingredients)
+            else:
+                result[allergen] &= set(ingredients)
     return result
 
-def clean_ingredients(data):
-    all_ingredients = []
-    allergen_map = defaultdict(list)
-    for food in data.splitlines():
-        match = re.match("(?P<ingredients>.*?) \(contains (?P<allergens>.*)\)", food)
-        ingredients, allergens = match.groups()
-        ingredients = set(ingredients.split())
-        all_ingredients += list(ingredients)
-        allergens = allergens.split(", ")
-        for allergen in allergens:
-            allergen_map[allergen].append(ingredients)
-        log(f"ingr: {ingredients} ; alrg: {allergens}")
-    log(allergen_map)
-    possibly_unclean = []
-    for allergen in allergen_map:
-        possibly_unclean += [a for a in intersections(allergen_map[allergen])]
-    clean = set(i for i in all_ingredients if i not in possibly_unclean)
-    log(f"All ingredients: {ingredients}")
-    log(f"Clean ingredients: {clean}")
-    return sum(1 for i in all_ingredients if i in clean)
+
+def surely_clean(data):
+    maybe_dirty = set()
+    for ingredients in maybe_dirty_by_allergen(data).values():
+        maybe_dirty.update(ingredients)
+    return [
+        ingredient
+        for ingredients, allergens in load(data)
+        for ingredient in ingredients
+        if ingredient not in maybe_dirty
+    ]
 
 
 # Part Two
 
-def dirty_ingredients(data):
-    pass
 
+def part_two():
+    print("Part Two")
+    assert "mxmxvkd,sqjhc,fvjkl" == ",".join(surely_dirty(data[0]))
+    print(",".join(surely_dirty(data[1])))
+
+
+def surely_dirty(data):
+    mda = maybe_dirty_by_allergen(data)
+    while len(mda) < sum(len(i) for i in mda.values()):
+        for ingredients in list(mda.values()):
+            # Remove fully reduced from all other lists.
+            if len(ingredients) == 1:
+                final = next(iter(ingredients))
+                for others in list(mda.values()):
+                    if final in others and others != ingredients:
+                        others.remove(final)
+    return [next(iter(ingredients)) for _, ingredients in sorted(mda.items())]
 
 
 # Data
 
 data = []
 data.append(
-"""mxmxvkd kfcds sqjhc nhms (contains dairy, fish)
+    """mxmxvkd kfcds sqjhc nhms (contains dairy, fish)
 trh fvjkl sbzzf mxmxvkd (contains dairy)
 sqjhc fvjkl (contains soy)
-sqjhc mxmxvkd sbzzf (contains fish)""")
+sqjhc mxmxvkd sbzzf (contains fish)"""
+)
 data.append(
-"""hptqj nsmzxmb fzrl dqzqc lpdzt jlsqx hxppxj thfxd cvlsf fnntr zjjtk skvtqh bkjmj ndqqkkd fjcbvv kjdn fgnb tnlcqmx lnsxs dkzjl gzvsg xcfmb psgkj qlzk bxpb sdhjcs csqc tr mdkpg lnmrmr lqvmhb xlfp mvrqd lvv vdsxp zsqxl nsdr kqrp dsrh pqvfd rzkptk knct dsbjd xdbdgc vsxk cvbn jvkn mjg xblchx vqdxs mndfgv vgpgn mvsx vslznhr (contains wheat)
+    """hptqj nsmzxmb fzrl dqzqc lpdzt jlsqx hxppxj thfxd cvlsf fnntr zjjtk skvtqh bkjmj ndqqkkd fjcbvv kjdn fgnb tnlcqmx lnsxs dkzjl gzvsg xcfmb psgkj qlzk bxpb sdhjcs csqc tr mdkpg lnmrmr lqvmhb xlfp mvrqd lvv vdsxp zsqxl nsdr kqrp dsrh pqvfd rzkptk knct dsbjd xdbdgc vsxk cvbn jvkn mjg xblchx vqdxs mndfgv vgpgn mvsx vslznhr (contains wheat)
 lnsxs fmvgfst zsqxl nsmzxmb mdpvf jkpfxt fsz csqc vqdxs kgbb hpldm hptqj zzdfft skdjptd thbb tkvbkrvr dtzvnzxp qbggml kcx rpcj czmjt lxdl ltknct srnccvg vrrd pxhg xdbdgc tfq cspfk mqp lxnh lxpkp lvv jdmcbz vxmcb jngk mzdbdc fnntr mdkpg rhzkpc mvrqd lpdzt gvxbm fgnr jbczm xcfmb lmnvt kbxstnn lnmrmr ngmrdp xggpr kfrzs hxppxj hnsrvm dsrh trlqzsk tnlrhk rdzn skvtqh jhjx zjjtk tr xjqdvc mflzcf nsdr sljbmk jlsqx bvhnk lqvmhb bbmjz gzvsg kqqjrlv xlfp pmz mndfgv (contains wheat)
 fhmbh jlsqx lfxmc jdmcbz lnsxs jvkgsj bvjhb kfrzs lvv lqvmhb hmgdj pmz xggpr csqc rdzn mdmtq mqvzft ngmrdp xblchx mgfh qzbgm lvxtx jvkn ngqg mvsx nsmzxmb kcx jbczm bkjmj thfxd cvlsf vsjp vgjvgx qlzk ffkmkm tfq xjqdvc ltxpx gncmsr vsfkjj lmnvt tr xcfmb jhjx kbrdvh nnhkkc xkgp fkgdkc bbmjz bffbj mqndc gzvsg hjnxgz zvdrl sdfp mvgvxn trlqzsk pnbl gfr tkglrrcb kqrp phhf vc qxx gvxbm zdhp glrg ckpflp llfr vslznhr pjgmtx vgpgn gbbbjxj vqsf pxhg (contains eggs, wheat, sesame)
 fmvgfst dkzjl dtzvnzxp qzzpf tnlcqmx zzdfft gzvsg qppgg fjcbvv ngb zgvgj fhmbh xkxc tr fgnr xlfp rjqbv gncmsr lvv lkxrvrjp vsfkjj mflzcf qbggml jbczm mjg hnhj jlsqx jhjx fsz pqvfd xblchx lxdl mndfgv dhsk ngqg xcfmb jvkn kbrdvh pslqnv jtjs vgpgn vgjvgx pjgmtx cknjx hxppxj csqc rhzkpc mdmtq nsdr cvbn fnntr lrpfxc nnhkkc lnsxs vrrd ckpflp tnlrhk (contains peanuts, wheat)
@@ -104,11 +117,22 @@ jfntgt hjnxgz fjcbvv xggpr rpcj phhf pxhg lxpkp gzvsg tfq fsz ckpflp lvxtx thbb 
 kcx xlfp mvrqd pjgmtx tnlcqmx ppplv lknbrdfg fnntr qppgg tkglrrcb bffbj hpldm hjnxgz lnsxs vdsxp bbmjz bvhnk dhsk mqvzft plfdps ttbgq kjdn kfrzs tr lvv mndfgv ffkmkm mgfh bxpb lxnh phhf vh jlsqx vc skvtqh lprmnm zjjtk lvxtx ngb kqqjrlv mdpvf qxx nnhkkc hlrfp lpdzt csqc jtjs gzvsg xblchx hptqj ldh fhrxr jkpfxt phdlfr (contains dairy, shellfish)
 lpdzt vc gzvsg jfntgt srnccvg dtzvnzxp vdnlg phdlfr pxhg zjjtk zdhp vqdxs kqrp ndqqkkd fgnb kbxstnn ttbgq mvgvxn tnlcqmx dvt hptqj qbggml kqqjrlv nsmzxmb gd tfq fnntr fzrl mdpvf fqsncq llfr csqc hlkc xlfp vgjvgx bvjhb phhf cglxq nnhkkc bqxxl ppplv vgpgn pmz tr ngqg thbprk lvv pjgmtx tbbjf jvkgsj gbbbjxj jhjx jlsqx mflzcf (contains shellfish, wheat)
 bqxxl xkgp mdmtq ltxpx pslqnv kcx skvtqh fzrl ndqqkkd rhzkpc tbbjf mgckcv fhrxr qppgg fjcbvv ldh glrg bvjhb fssdcn hjnxgz xkxc tr lprmnm pxhg qbggml mvgvxn lrpfxc gzvsg lknbrdfg fxk bffbj rzkptk mndfgv jlsqx vgpgn lxnh kjdn fnntr nsdr mflzcf rdxtmg xblchx lvv dvt flvc cglxq lxpkp hlrfp dhsk qzzpf hmgdj rfb xdbdgc pmz mqp vfff xggpr lnsxs kfrzs pxqhk sljbmk (contains soy, nuts, eggs)
-bvjhb dqzqc lxdl kfrzs tnlrhk qlzk xdbdgc jtjs dsrh glrg mflzcf csqc bffbj qppgg kqrp vgpgn sq lxpkp plfdps hmgdj rpcj mdkpg kbrdvh llfr fqsncq skvtqh mqndc ksgd tbbjf jlsqx qxx xkgp vxmcb mdpvf bqxxl tznvr lxnh pxqhk pmz mbkgdq thbb fnntr pqvfd fssdcn ltknct vqsf tr gzvsg vh qzbgm lnmrmr kqqjrlv ngb rhzkpc dgts hptqj vslznhr vrrd vfff xblchx tfq jvkn mzdbdc mvgvxn mjg fmvgfst (contains sesame, soy, nuts)""")
+bvjhb dqzqc lxdl kfrzs tnlrhk qlzk xdbdgc jtjs dsrh glrg mflzcf csqc bffbj qppgg kqrp vgpgn sq lxpkp plfdps hmgdj rpcj mdkpg kbrdvh llfr fqsncq skvtqh mqndc ksgd tbbjf jlsqx qxx xkgp vxmcb mdpvf bqxxl tznvr lxnh pxqhk pmz mbkgdq thbb fnntr pqvfd fssdcn ltknct vqsf tr gzvsg vh qzbgm lnmrmr kqqjrlv ngb rhzkpc dgts hptqj vslznhr vrrd vfff xblchx tfq jvkn mzdbdc mvgvxn mjg fmvgfst (contains sesame, soy, nuts)"""
+)
 
 
 if __name__ == "__main__":
+
+    def main(part=None):
+        if not part or part == 1:
+            part_one()
+        if not part or part == 2:
+            part_two()
+
     doctest.testmod(verbose=False)
-    if len(sys.argv) > 1 and sys.argv[1] in ("-v", "--verbose"):
-        logging.basicConfig(level=logging.DEBUG)
-    main()
+    if len(sys.argv) > 1:
+        if len(sys.argv) > 2 and sys.argv[2] in ("-v", "--verbose"):
+            logging.basicConfig(level=logging.DEBUG)
+        main(part=int(sys.argv[1]))
+    else:
+        main()
