@@ -1,0 +1,183 @@
+#!/usr/bin/env python
+import doctest
+import logging
+import math
+import sys
+from collections import deque
+
+
+log = logging.getLogger(__name__).debug
+
+
+# Part One
+
+
+def part_one():
+    print("Part One")
+    assert play(data[0], 10) == "92658374"
+    assert play(data[0], 100) == "67384529"
+    print(play(data[1], 100))
+
+
+def play(data, moves=10):
+    cups = deque(int(i) for i in data)
+
+    for _ in range(moves):
+        log(f"-- move {_ + 1} --")
+        move(cups)
+        log(f"")
+
+    log(f"-- final --")
+    log(f"cups: {' '.join(str(c) for c in cups)}")
+
+    one_index = cups.index(1)
+    return "".join(str(i) for i in list(cups)[one_index + 1 :] + list(cups)[:one_index])
+
+
+def move(cups):
+    log(f"cups: {' '.join(str(c) for c in cups)}")
+
+    current = cups.popleft()
+    pickup = [cups.popleft() for _ in range(3)]
+    maybe_destination = current - 1
+
+    log(f"pickup: {', '.join(str(c) for c in pickup)}")
+    min_remaining_value = min(cups)
+    max_remaining_value = max(cups)
+
+    cups.appendleft(current)
+
+    while maybe_destination not in cups:
+        maybe_destination -= 1
+        if maybe_destination < min_remaining_value:
+            maybe_destination = max_remaining_value
+    log(f"destination: {maybe_destination}")
+    destination_index = cups.index(maybe_destination) + 1
+    for cup in reversed(pickup):
+        cups.insert(destination_index, cup)
+    cups.rotate(-1)
+
+
+# Part Two
+
+
+def part_two():
+    print("Part Two")
+    # import cProfile
+    # cProfile.run("play_two(data[0], 1000)")
+    # return
+    assert 149245887792 == play_three(data[0], 10_000_000)
+    print(play_three(data[1], 10_000_000))
+
+
+def play_three(data, rounds=10):
+    num_cups = 1_000_000
+    cups = [int(i) for i in data]
+    cups.extend(i for i in range(max(cups) + 1, num_cups + 1))
+
+    current = cups[0]
+    pointers = {k: v for k, v in zip(cups, cups[1:] + cups[:1])}
+
+    def move_three(current, pointers):
+        next_card = pointers[current]
+        pickup = []
+        for _ in range(3):
+            pickup.append(next_card)
+            next_card = pointers[next_card]
+        pointers[current] = next_card
+
+        maybe_destination = current - 1
+        while maybe_destination == 0 or maybe_destination in pickup:
+            maybe_destination -= 1
+            if maybe_destination < 1:
+                maybe_destination = num_cups
+        destination = maybe_destination
+        # Put back pickup
+        temp = pointers[destination]
+        pointers[destination] = pickup[0]
+        pointers[pickup[2]] = temp
+
+        return next_card, pointers
+
+    for _ in range(rounds):
+        if _ % (rounds // 10) == 0:
+            print(f"-- move {_ + 1} --")
+        current, pointers = move_three(current, pointers)
+
+    return pointers[1] * pointers[pointers[1]]
+
+
+# Unused now
+
+
+def play_two(data, moves=10):
+    num_cups = 1_000_000
+    cups = deque(int(i) for i in data)
+    cups.extend(i for i in range(max(cups) + 1, num_cups + 1))
+
+    for _ in range(moves):
+        if _ % 1000 == 0:
+            print(f"-- move {_ + 1} --")
+        move_two(cups)
+
+    log(f"-- final --")
+    log(f"cups: {' '.join(str(c) for c in cups)}")
+
+    one_index = cups.index(1)
+    return math.prod((list(cups)[one_index + 1 :] + list(cups)[:one_index])[:2])
+
+
+# Tried to speed move() up but still too slow, suffers on the deque.index
+def move_two(cups):
+    current = cups.popleft()
+    pickup = [cups.popleft() for _ in range(3)]
+    maybe_destination = current - 1
+
+    # TODO: Do I need to account for current card here?
+    min_remaining_value = (
+        1 if 1 not in pickup else 2 if 2 not in pickup else 3 if 3 not in pickup else 4
+    )
+    max_remaining_value = (
+        1_000_000
+        if 1_000_000 not in pickup
+        else 999_999
+        if 999_999 not in pickup
+        else 999_998
+        if 999_998 not in pickup
+        else 999_997
+    )
+
+    cups.appendleft(current)
+
+    while maybe_destination in pickup:
+        maybe_destination -= 1
+        if maybe_destination < min_remaining_value:
+            maybe_destination = max_remaining_value
+
+    destination_index = cups.index(maybe_destination)
+    cups.rotate(-1 * destination_index)
+    cups.extendleft(reversed(pickup))
+    cups.rotate(3 + destination_index)
+
+
+# Data
+
+data = []
+data.append("389125467")
+data.append("123487596")
+
+if __name__ == "__main__":
+
+    def main(part=None):
+        if not part or part == 1:
+            part_one()
+        if not part or part == 2:
+            part_two()
+
+    doctest.testmod(verbose=False)
+    if len(sys.argv) > 1:
+        if len(sys.argv) > 2 and sys.argv[2] in ("-v", "--verbose"):
+            logging.basicConfig(level=logging.DEBUG)
+        main(part=int(sys.argv[1]))
+    else:
+        main()
