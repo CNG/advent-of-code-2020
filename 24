@@ -1,0 +1,472 @@
+#!/usr/bin/env python
+import copy
+import doctest
+import logging
+import re
+import sys
+
+
+log = logging.getLogger(__name__).debug
+
+# Part One
+
+# Can we use normal grid as a "hex grid"? Yes! Like the bees.
+#
+# 0: 0 1 2 3
+# 1:  0 1 2 3
+# 2: 0 1 2 3
+
+
+def part_one():
+    print("Part One")
+    assert 10 == len(flipped(data[0]))
+    print(len(flipped(data[1])))
+
+
+def flipped(data):
+    flipped = set()
+    reference = 0, 0
+    for directions in data.splitlines():
+        flip = hexmoves(reference, directions)
+        if flip in flipped:
+            flipped.remove(flip)
+        else:
+            flipped.add(flip)
+    return flipped
+
+
+def hexmoves(address, directions):
+    """
+    >>> hexmoves((0, 0), "nwwswee")
+    (0, 0)
+    >>> hexmoves((0, 0), "esew")
+    (0, -1)
+    """
+    for direction in re.findall(r"se|ne|e|sw|nw|w", directions):
+        address = hexmove(address, direction)
+    return address
+
+
+def hexmove(start, direction):
+    """
+    >>> hexmove((0, 0), "se")
+    (0, -1)
+    >>> hexmove((0, -1), "se")
+    (1, -2)
+    >>> hexmove((1, -1), "w")
+    (0, -1)
+    >>> hexmove((1, -1), "nw")
+    (1, 0)
+    """
+    x, y = start
+    if direction == "e":
+        return x + 1, y
+    elif direction == "w":
+        return x - 1, y
+    else:
+        odd = True if y % 2 == 1 else False
+        # if row is odd, nw and sw are "same column", ne and se are x+1
+        if direction == "ne":
+            return (x + 1 if odd else x), y + 1
+        elif direction == "nw":
+            return (x if odd else x - 1), y + 1
+        elif direction == "se":
+            return (x + 1 if odd else x), y - 1
+        elif direction == "sw":
+            return (x if odd else x - 1), y - 1
+
+
+# Part Two
+
+
+def part_two():
+    print("Part Two")
+    assert 2208 == len(flipped_two(data[0], 100))
+    print(len(flipped_two(data[1], 100)))
+
+
+def flipped_two(data, cycles=1):
+    blacks = flipped(data)
+    "Iterate through lists of all black tiles and their neighbors."
+    for _ in range(cycles):
+        new_blacks = copy.deepcopy(blacks)
+        for tile in blacks | set(t for tile in blacks for t in neighbors(tile)):
+            black_neighbors = sum(1 for t in neighbors(tile) if t in blacks)
+            if tile in blacks:
+                if not black_neighbors or black_neighbors > 2:
+                    new_blacks.remove(tile)
+            else:
+                if black_neighbors == 2:
+                    new_blacks.add(tile)
+        blacks = new_blacks
+    return blacks
+
+
+def neighbors(tile):
+    """
+    Generate each tile within 1 tile in all directions.
+    >>> list(neighbors((1, 0)))
+    [(2, 0), (1, -1), (0, -1), (0, 0), (0, 1), (1, 1)]
+    >>> list(neighbors((1, -1)))
+    [(2, -1), (2, -2), (1, -2), (0, -1), (1, 0), (2, 0)]
+    """
+    for direction in ("e", "se", "sw", "w", "nw", "ne"):
+        yield hexmove(tile, direction)
+
+
+# Data
+
+data = []
+data.append(
+    """sesenwnenenewseeswwswswwnenewsewsw
+neeenesenwnwwswnenewnwwsewnenwseswesw
+seswneswswsenwwnwse
+nwnwneseeswswnenewneswwnewseswneseene
+swweswneswnenwsewnwneneseenw
+eesenwseswswnenwswnwnwsewwnwsene
+sewnenenenesenwsewnenwwwse
+wenwwweseeeweswwwnwwe
+wsweesenenewnwwnwsenewsenwwsesesenwne
+neeswseenwwswnwswswnw
+nenwswwsewswnenenewsenwsenwnesesenew
+enewnwewneswsewnwswenweswnenwsenwsw
+sweneswneswneneenwnewenewwneswswnese
+swwesenesewenwneswnwwneseswwne
+enesenwswwswneneswsenwnewswseenwsese
+wnwnesenesenenwwnenwsewesewsesesew
+nenewswnwewswnenesenwnesewesw
+eneswnwswnwsenenwnwnwwseeswneewsenese
+neswnwewnwnwseenwseesewsenwsweewe
+wseweeenwnesenwwwswnew"""
+)
+data.append(
+    """wseseseswsesesewnesesesesewneseseswnene
+seswswsenenweseneesweenwswneswsenwsenw
+nenwneneneeneneneneseeenene
+swwenwseswseswwnweswswswnwwswesww
+nwenenwnwwswnwsewneneswnwswnwwwwsenw
+seswseseswsesweseswswswnw
+seneesweneesweweeseeseeeenese
+nwswnwenwnwnwnwseneswnenwneswswsenenwnenw
+wsewwwwwwnenwwwwwneswww
+wneneneneenenewneneenesenenenee
+sesenweswswneswneswwswnwnwseswseswswnesw
+eenwneswseswnwneseneneswwesenwswnwwnese
+swnwwenenenwnwnwnwwswnwnwnwnwnwnwneswsw
+neeeweswneesweeseeeenweswswwnenw
+swswseswnwswseseseneneswsw
+eeswnwwnwsenenesenwnwnenwenwnwnenwwnwsw
+wseeseswsesewenwswswnweseseseseseswswne
+newnewneneneeneswseeneeneeneneese
+wenweeswseeeeweseeswneeenwene
+swneneswswswnwseseseseswneswswsesesesese
+weweewwswwwnw
+esesesesewesesenweseseeneswswenesee
+eswneswswnwswenewnenwneeeswneswnene
+esenenesewseseseesewsesese
+wswseneseseeewseswnwneeseneewenee
+swseswseewswweeswnwewswenwnewsese
+seswseseswwneswswswseswswnwswnwnewnene
+sweeesenenenewnenenwneneeneeenewsw
+wnwwwwseswnwwwswneswswesewswsenwsww
+swswseswswnwneesewswseswneswswsw
+seenwseswseesenwseeseseseseseseswswne
+swswswnewswswswswswswswsenewwwnewse
+swswsewneneswseswnewseswneswneseswsese
+wwswnwewswsesenweneeeenwwneee
+nwnenenwnwnenenenwnewnwnwnwswe
+wwsenwsewwweewwswwswwwnenew
+wnenwewnenenenweneenwnwswsw
+weeewsweeeeneeeenwneneneneesw
+sewnwnwwnwwnwwneweeswnwsenwswnw
+swnenenenwswnweswnenenenewnenenene
+nwswnwnwsenwesenwnwnwnenwsenenwnwnwwnwsew
+nweeeenenenewsweeeneeeeesewese
+neneneneneenenwneneeneewnesw
+nenwnenwnwnwswnwnwnwnwnwnwnw
+nenwswnwnwnwwswnwnwwwnwenwsenwneswnwne
+wseneseseseesweseseeenenwenewsese
+senwwsesenwenwenenwewseswnweswsese
+eweseeseswenwseseeseesenwnwnenwee
+wwnwnwwenwnesewwnwnwswwnweeswww
+neeneeeneeenenenenwenese
+nesenwnwneenwnenwwswnwseswswwwnwene
+nesweeswwseswsesewnesewswnw
+nwnwewnwnewswnwswwnww
+enwnesenwsweseeeewneseeee
+seneswwsesesenesesesesesesesenwsesesese
+seweswsenesweswswnwswswswwswswswswsw
+swswswswswwswneenwswswswswswsewswsene
+nenwenewnwnwneneswneneneneneneswenenesene
+esenwsesesesesesesesesese
+nenwnenwnwnwnenenwnwnenweswnene
+swwwwwnewnwnwseewnww
+nesenenenenwnewnenwswnweneesenew
+wwwwwwwwsewswwswwnw
+sesweswswswenwnwswswswswwseswswnwswswswnw
+sewnwswswewesee
+swnwswswsewswswswneseswswswsw
+seswenwnwseeswwnwneseesenweseseesenw
+ewesenwseseseeseeseseswsewwwsesw
+neeswnenwseenwnenenenwewwnenwnenwnw
+eswweeeneneeswenwneenwsewseswse
+wwswseseeeseewnwseesesesenwsenese
+nwswnwnwenwweswseneswswneswsenenenw
+nwwweswewswwnwswswswewwwnwwseee
+seseeswsewnwnenweneneenwse
+swswwwswsewnwswswww
+nwseweseesewsesesewneseseswesese
+wwwwnewwwwnwnenwwswwsw
+nwenenwseneneswnesenenwnwsewnwswwnwswnwnw
+wswneswswswenwseswnwswsesweswswwsesenwne
+neesenwnenwseseesweswnwenwneeewe
+wneswwwwswwwswweeswweswswwww
+wnwewwwwwewwswwwwwwwew
+seewwswwwswwneswswwneswnw
+swnwswnwsesenwnweswswwseneeewswswsw
+swenenwneswwnenweswswnenweeeeeseee
+wnwnwneenwswswsenwseenwnwnenwwnwwnene
+neneeneswnwneeseewneeweneneneenee
+seesenwnwsenesesweseseseswseeneswnwwnw
+nweeseseneeenewneeeeeswenwneee
+swnenesenwswnenwnwewweswswnwwnenese
+senwnewwsenwnwnwnenwnwnwnwnwneeesenwnw
+swseenwswneseeseeseseseeewnesenee
+sewwswwsenesewnenwewwneeswswee
+swneneeeswneneeenenwnene
+swwneswswwswseswswswsewwwwnww
+nenwnenenenenenesenwsweneneswnenenwnenw
+nweswneswseeeeeeswneeeeeneew
+swneseneenweeeenwsweseenwsw
+nwwswswwenweswwswswwswswswneewwsw
+nesweeewsenewsenwnenenwneeneneenenene
+swswwswnwwneeswweswswwswswesewwswe
+seswseseseeenenweenewwsewseseesese
+wswweswwseswwwnw
+wsenwsesesenwnenenenwnwswwwnwnenwswwne
+swswsweseswswswswswnwswsweswnwswneswswsw
+wswwwnwwwwwe
+seneseswseseeswnewswswsenwswsesesesese
+neesenenesenwenweenwsewneew
+wswwswswwswnwswwewswewwnwswesw
+swsewsweseneseseneswnese
+seseseneswesesesesesesese
+newwnesesewnwnenewneneneneswneneswenese
+eseswneeenewsenwnewee
+nwswswswneswwsweswsw
+nwwswwswswsewnwswweewwswswswwswnese
+wnewseneeeesweseeewseseseseseneese
+swenewnwnweeneneneneswnewsenwnwnenw
+nweweeeeswneweseneneneeeswnene
+eswneseeeesenweewseweseneesee
+nwwswwneneenwsenenwnweneneneeneswe
+eweswneneeeseeswenwsenenwnesesewenw
+nwseneeswneesesenenwnwneneeswnenwnenwse
+swswnwsweeswnesenwswswswswswswswsenwse
+nenwnwenwnwswneswnwsenwnwnwenwnwswnwsesw
+nwseneenwnwnenwwnwnenwsw
+nwnesewswswswsweswwswneswnweswe
+enwswwwnewnewwswwwwnwswwwseww
+nenwnenenwwneweneseswenwnenwneeswswne
+nenwnenwswwneneneneenwswnwneswneneneenesw
+neseseneswnewnenesesenenwnwneswsenwnwnw
+swenenenenenenesenewnene
+nwnwnwnwnwnwnwnwnwenwnwnwswnw
+neseneswwnwneswnwsewseseeswenwneswswsw
+wwwwneenwnwseswenenwnenwwwnwsesw
+wwnewswwwnewswwsewwww
+sesesewswsweseswseswse
+seswewneenwnenwnwnenwnwnwnwneneswswnwnenw
+neeseenwseesweneseweeseeesenwsw
+swneneneenewswneneewnenwnwwnwswswnesese
+swnesenwnwnwnewnwnenenenwnenenw
+wwwnewneeswsenwnwswwnwnwenwnwnewnw
+eeeeeeneweeseeeeee
+neweeswsenenwseeeeeneneneeneeneswnw
+nwnwwenwnwseenwnwenwwnwswwnwswewne
+wneenewenweenwseseseesesenewww
+eewneeneneeneeenene
+swswsenwweenwswswswswswswswsw
+nwneneseeenwnwnwswnwwswnwse
+swenwnwenwswwnwnwswneenwnwnwnenwnwnwse
+wsewswwnenwneseswsenwsww
+seeeenwseseneeeeseeeswesew
+weenwnewnenwseenwnwnenwnenwnenwwne
+sweeeswesenwwnwswwneswnwwewenenw
+eeneeenwesewweeneeeswewee
+sweseswseswneseseswswsewsesw
+wneswseseseseswseseseswswwswsesee
+swswswswswseswswwwseeseenewnewsw
+eeswnwnwnesewswneseneswsesweewswsee
+eseweeneseseseee
+weswswnwswsesewswsewenwneneswswenwnw
+seseenwseeswneswseenwseseewee
+eeneneeswsweseswewwneenwe
+neseewnwwesewnwwwswwsewnesenew
+eneswnenwewneseneneenenweneneseene
+sesenesesesesesenewswsesewseseseseseew
+nenenwnenwneeneneneneenwwswneeswnwesw
+wwewwsewewwsewwnwwwnwnewww
+nweneewnwseneseseeeeswsenweeenew
+nwnwwseswseeseseseneenwewswnwseswse
+neewsweseeeweswnwsenenwnwwwne
+senenwnewseseeswsweseseswswnwwseesesenw
+neswswnwnenenwnwsewwnwneswswenwsewnwnenw
+wwswwenwnewseneeswsewewnw
+seswsewseseneseswneesesenwseseswsesesene
+ewwsenenwwseswswsenwnewweenwwenww
+nenweenwneenwseneneewwsweeesewe
+wswnwwwewwwsewnwsewwsewnwnwse
+nwnenwnwenwnwenwnwnesweneswnwnwnwnwswnenw
+seeneswwesesesewswsenwwwneewnwne
+swwnwswseeswwswswenwswsweswswswwwnw
+seswnwewswseswwswwseenesw
+eneneseneneneeeneswneneeewnweseswne
+enwwneeneeeeesw
+sesesenwsesenweesweseeseseneseseswe
+nwnwnwnenwenenenenww
+nwnwwnwswenwnwnwwnwnwnwwesewnwwnwsw
+wwneesenwwsenweswwsewsewwnenww
+swswseswswneneswswswswwsweseseswnwswse
+wseenwwwwnwnwnenwnwwnwesewsenwnww
+wseneseswswwwsewswswwnewsweneswswnww
+nwsewnwwnenwnesewsewwnwwswnwnwswnw
+senwenesenenenesweenewnewnenenenenw
+swnwswweewnwwwnwswseswewewwsww
+wsewswnewsenewsewwwswwwwwwnw
+nwsenwnenenenenwnwnwnenwnw
+nenenwnenwnwnwnwnwenwwnesenwswnene
+nwwweewenweeswesw
+wnwnwnwsenwswnenwweswwnwnenwwwnwww
+seseneenwseneneswwneseneeeweneneenw
+swswwswswwswswswswwwesww
+nenesenewnwsenenenenwwnenwenenenenww
+wnwneseswswswswswnenewswenwswwsesesw
+wwwwnwseswwswwsww
+nwseenenwswweeseseneseeesewswsesene
+nenewsenewwneesweneesewwnwe
+wwswwewwwwseswwwweswnweesw
+nesweewswsweneeneneenwne
+wseseswnwesenwnewseneswenwneswseesw
+nwnwwswsenweeswswnwseswsweswse
+nenwnwnwnwswneneenenwswswsenwnwnenwnwsenw
+wswnewwnwswwwewnwnwsenwnw
+nwswneneseeseneeswwne
+nwseseswswneswnewsenwseneseswseeseswsenw
+enwnwnwswnwnwseneswnwswneswenwwwnesee
+wnwnwwswnwnwnenwwwnwnwnwnw
+nenwewnesewwswwswneswwseewnwww
+nwswsweewswsesesesweswnewnewneesesw
+nenwsewwwswwwwswwseswww
+nwnwseneneneneneswnwnwnwneswewneneewne
+weswsweseseneswsenwsenwseneneesesenwsesw
+nwnwswwnwnwnwwnwwnwenw
+swnwnwnwenwnwneswnwenwsenwnwnwnwnwnenw
+neswnenwneenwswnesenwneesweneswwnene
+neeeneneeeeeeesewweeesw
+eswneneneseswseswswsesenwnwseswseseswse
+seeeeneseseseseswenwnweseesw
+wewewnenwnwnesweenwnwwsewswnew
+seseweseseseeseneesesewswenewse
+wnesewswwswwswwwwneewwwwswsewnw
+nwweseswnwwsweseseeneneseeesewsese
+nwswneeseewseswneeswnwwwnw
+seseswwneesenwneseseeenweseseseesesw
+enwnenenenweneneneneneswswnenenesene
+eneswseeneseweeeeneenweenwene
+swwwwwwwwswnwe
+nwsesesesesesewnewseeeswsesee
+nwseeseeseseeswsenweneseesweee
+nweswwneswnwwnwswweswnwnwnwnwnwnewe
+neneswseswenenwnweseeswseseswwnwswswne
+wnwnwwwwneswewnwwwseswnenwwww
+wnwenwsewwwneseswnwesweeeewse
+seeseswnweseseeswswwnwswnwnwwswsee
+swswswewsewswseswnwnwwswswswswnewswse
+eswseneswnwsweneenw
+enwnwswnwwsewwenwnwnwsenwwnwnwnwnw
+eeeenesewseeeeeeseweneswwee
+eswsweeneneneeeneseneneneewswnwnwe
+nwwseseswsenwnwenenewwneneneenewnwnw
+nwnwnwnwnwnenwnwnwnwnwnwnwnesw
+wneeneswewneneenesenwnwswne
+nenweswneesweeeneee
+neseneswneneneseenenewenenwneneenwse
+swnwswsweneswswswwnwswswswsewseseswwnew
+swenwwnesenweewww
+swswwwwnwswwwnwnwwswwwseewswe
+seswseseswsesesesesenwsese
+nenwsewnesenwnenenwnenenesenenenewseswne
+nenwnwnwswnenweneenwnenwneswswswnenwesw
+wswseswewneseseesenenenwnewswseseswswsw
+nesewseseseseseseeseseseseseswenwswnwse
+senweswswswseswseswseweeswswwse
+wwweesewnwnwswswswswswwwnenwwww
+nwswseneenwswswwnwsweseswswswwswswsw
+weswneneswneenenesenesewnenenwnenwsesw
+neneenenenenenenenwswneneneneeswne
+eeenwseseeeeeswseweeenwneeee
+swswswswswswwsweswswnwswwenwswswsw
+senwnwswswswswewnesenewwswnwwwswsw
+nenenwneswnenwnwwnesenenewnenwnenwesese
+wwsewnewswnweswsesenwnwnwnwsweswe
+nwnenwnwsenwnwnwnwnwwnwseswwnwwnenwewnw
+seswswnenweeswnwnwnwswswswneswse
+nenesenweeseeneneswneenweweeswene
+enesweneeneewneswwnenewneenwnw
+swseseswsesenweswnwnwnesenw
+nwsenwwnwnwneenwwwnwwwwwnww
+seeseneswseswswswsesewswswseswsenewwse
+swnenenenwewnenwsenwsenwnwnwnwnw
+ewwwswnenwswnwwsenwewneenwwnwwse
+swneenweeeneenweeeeeswnweeswnwse
+sweeeeseenweeeeeenwwee
+weswwwwwnesewwwswwswswwnw
+swswswswswswnwswswswswswswswe
+wnwnwnenwswnwsenwsenwwnwnwnwwnenwswe
+swwwswwwnwnwnweswnwwwenwnwenewne
+eenwesesewseenw
+neeeseseeenwenwsweeseeeeewe
+swnesenwnesenwnwnenwnenewswseenenenwnw
+enwwneenwneswnwsenenwnwwnwnwnwnwnw
+swswnwnweenwswwneneeswnwnwnewnwwswsene
+neswwswsenenwwnwneesesenwnwswweswnee
+seswsesesenewneswsese
+seneswnenwswswnwneeneswnenwwnesenenww
+sesesesesenewewseeseene
+eseeewneeneeeeweeneswnweneneswe
+neswswswswswseeswswnwwswsweswwsw
+wnenwswsewenwnwswwnwenwswwnwnwee
+seseneswsewswseseswnesesesesesenwswsese
+enewswswnwsewnweswswneswwewwwneswse
+seseseswnwnwnwnwnwnwnenwnenwnwnewwnwnwnw
+neswnenwwneswswswew
+seseenwneneneweseeenwnenewswwwneew
+swswswneswswwnwswsweeswswseswseswnwseswne
+nenenwwneswswenwnwnenenwnenewnesenenw
+enwwneneeeneenenenewsesenewsenenenesw
+swseseseseseseseseswnwsesese
+swnwnwewsesewenesenwswew
+eesenwnwenesweswweeswswsenwnwse
+nwwneseseseneneswwswseswswsewswneswsenw
+sweseswnwswnwswswswswswswsenwswswesweswsw
+seneswneneenwnewnwwseswnewene
+wnwnesewnenenwseswnwnenwneenenenenenee
+seseeseneswswseseseeenwsenenwsesesee"""
+)
+
+if __name__ == "__main__":
+
+    def main(part=None):
+        if not part or part == 1:
+            part_one()
+        if not part or part == 2:
+            part_two()
+
+    doctest.testmod(verbose=False)
+    if len(sys.argv) > 1:
+        if len(sys.argv) > 2 and sys.argv[2] in ("-v", "--verbose"):
+            logging.basicConfig(level=logging.DEBUG)
+        main(part=int(sys.argv[1]))
+    else:
+        main()
