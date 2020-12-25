@@ -8,7 +8,10 @@ import sys
 log = logging.getLogger(__name__).debug
 
 
-def main():
+# Part One
+
+
+def part_one():
     print("Part One")
     corner_ids = [int(t.name) for t in corners(parsed_tiles(data[0]))]
     assert 20899048083289 == math.prod(corner_ids)
@@ -16,45 +19,8 @@ def main():
     # print(len(corner_ids))
     print(math.prod(corner_ids))
 
-    print("Part Two")
-    # I ran out of time tonight, so leave this part unfinished. Still a long way
-    # to go and I'm not sure I'm even on the right track!
-    tiles = parsed_tiles(data[0])
-    the_corners = list(corners(tiles))
-
-    a_corner = the_corners[0]
-    the_rest = [t for t in tiles if t.name != a_corner.name]
-    
-    mt = MegaTile(int(len(tiles) ** 0.5))
-    mt.set(0, a_corner)
-
-    for i in range(1, len(tiles)):
-        # try setting each then testing
-        for tile in the_rest:
-            mt.set(i, tile)
-            if mt.test(i):
-                print(f"tile {tile.name} belongs in {i}")
-                break
-    mt.print()
-    return
-
-
-    for tile in non_corners:
-        if tile_a.name == tile_b.name:
-            continue
-        if match_any(tile_a, tile_b):
-            print(f"{tile_a.name} matches {tile_b.name}")
-            continue
-
-    print(mt.validate())
-    return
-
-
-# Part One
-
 
 def print_puzzle(tiles):
-    tiles = list(tiles)
     rows = int(len(tiles) ** 0.5)
     for x in range(rows):
         for y in range(len(tiles[0].content)):
@@ -68,20 +34,11 @@ def print_puzzle(tiles):
         print()
 
 
-# def corners_product(ids):
-#     r"""
-#     >>> ids = [[1951, 2311, 3079], [2729, 1427, 2473], [2971, 1489, 1171]]
-#     >>> corners_product(ids)
-#     20899048083289
-#     """
-#     return ids[0][0] * ids[0][-1] * ids[-1][0] * ids[-1][-1]
-
-
 def corners(tiles):
     log(f"We have {len(tiles)} tiles")
 
-    def borders(tiles):
-        return [border for tile in tiles for border in tile.borders]
+    # def borders(tiles):
+    #     return [border for tile in tiles for border in tile.borders]
 
     def all_borders(tiles):
         return [border for tile in tiles for border in tile.all_borders]
@@ -104,10 +61,6 @@ def corners(tiles):
     # print_puzzle(tiles)
 
 
-def parsed_tiles(data):
-    return [Tile(tile) for tile in data.split("\n\n")]
-
-
 class Tile:
     def __init__(self, data):
         name, content = data.split(":\n")
@@ -115,10 +68,12 @@ class Tile:
         self.content = [line for line in content.splitlines()]
 
         self.borders = []
-        self.flipped_borders = []
         for _ in range(4):
             self.borders.append(self.content[0])
             self.rotate()
+
+        # Only used for Part One
+        self.flipped_borders = []
         self.flip()
         for _ in range(4):
             self.borders.append(self.content[0])
@@ -140,97 +95,226 @@ class Tile:
         return "\n".join(self.content)
 
 
+def parsed_tiles(data, cls=Tile):
+    return [cls(tile) for tile in data.split("\n\n")]
+
+
 # Part Two
 
 
-def match_any(tile_a, tile_b):
-    for _flip in range(2):
-        for _rotation in range(4):
-            tile_a.rotate()
-            for _flip_b in range(2):
-                for _rotation_b in range(4):
-                    tile_b.rotate()
-                    if match_horiz(tile_a, tile_b):
-                        return True
-                tile_b.flip()
-        tile_a.flip()
-    return False
+def part_two():
+    print("Part Two")
+
+    # mt = MegaTile(*parsed_tiles(data[0], Tile2))
+    # print(mt)
+    # merged = Tile2(f":\n{mt}")
+    # print(merged.monsters())
+    # print(merged.roughness())
+    assert (
+        273 == Tile2(":\n" + str(MegaTile(*parsed_tiles(data[0], Tile2)))).roughness()
+    )
+    print(Tile2(":\n" + str(MegaTile(*parsed_tiles(data[1], Tile2)))).roughness())
 
 
-def match_horiz(*tiles):
-    for a, b in zip(tiles, tiles[1:]):
-        if a is None or b is None:
-            continue
-        if a.borders[1] != b.borders[3]:
-            return False
-    return True
+class Tile2(Tile):
+    monster = [
+        "                  # ",
+        "#    ##    ##    ###",
+        " #  #  #  #  #  #   ",
+    ]
+
+    def __init__(self, data):
+        name, content = data.split(":\n")
+        self.name = name.strip("Tile ")
+        self.content = [line for line in content.splitlines()]
+        # super().__init__(data)
+        self.state = 0
+
+    def mutate(self):
+        self.state += 1
+        if self.state % 4 == 0:
+            self.flip()
+        else:
+            self.rotate()
+        if self.state == 8:
+            self.state == 0
+
+    def border(self, num=0):
+        "0 = top, 1 = right, 2 = bottom, 3 = left"
+        if num == 0:
+            return self.content[0]
+        elif num == 1:
+            return "".join(row[-1] for row in self.content)
+        elif num == 2:
+            return self.content[-1]
+        elif num == 3:
+            return "".join(row[0] for row in self.content)
+
+    def flip(self):  # vertically
+        self.content = self.content[::-1]
+
+    def rotate(self, count=1):  # clockwise
+        for _ in range(count):
+            self.content = list("".join(z) for z in zip(*self.content[::-1]))
+        return self.content
+
+    def monsters(self):
+        def match(square, monster):
+            for y in range(len(monster)):
+                for x, char in enumerate(monster[y]):
+                    if char == "#" and square[y][x] != "#":
+                        return False
+            return True
+
+        def count_monsters():
+            monster = self.monster
+            self.mutate()
+            monsters = 0
+            for y in range(len(self.content) - len(monster) + 1):
+                for x in range(len(self.content[0]) - len(monster[0]) + 1):
+                    square = [
+                        self.content[y + 0][x : x + len(monster[0])],
+                        self.content[y + 1][x : x + len(monster[0])],
+                        self.content[y + 2][x : x + len(monster[0])],
+                    ]
+                    if match(square, monster):
+                        monsters += 1
+            return monsters
+
+        return max(count_monsters() for _ in range(8))
+
+    def roughness(self):
+        monsters = self.monsters()
+        return (
+            Counter("".join(self.content))["#"]
+            - monsters * Counter("".join(self.monster))["#"]
+        )
 
 
-def match_vert(*tiles):
-    for a, b in zip(tiles, tiles[1:]):
-        if a is None or b is None:
-            continue
-        if a.borders[2] != b.borders[0]:
-            return False
-    return True
+def touching(coords):
+    x, y = coords
+    yield x + 1, y
+    yield x - 1, y
+    yield x, y + 1
+    yield x, y - 1
 
 
-def match_all(*tiles):
-    rows = int(len(tiles) ** 0.5)
-    for y in range(rows):
-        if not match_horiz(tiles[y * rows : (y + 1) * rows]):
-            return False
-    for x in range(rows):
-        if not match_vert(tile for i, tile in enumerate(tiles) if i % rows == x):
-            return False
-    return True
+def match(spot_1, tile_1, spot_2, tile_2):
+    # log(f"{spot_1}, {tile_1.name}, {spot_2}, {tile_2.name}")
+    # log(f"\n{tile_1}\n\n{tile_2}\n")
+    x1, y1 = spot_1
+    x2, y2 = spot_2
+    b1 = b2 = None
+    if y1 == y2:
+        if x2 == x1 - 1:  # tile 2 : tile 1
+            b1 = tile_1.border(3)
+            b2 = tile_2.border(1)
+        elif x1 == x2 - 1:  # tile 1 : tile 2
+            b1 = tile_1.border(1)
+            b2 = tile_2.border(3)
+    elif x1 == x2:
+        if y2 == y1 - 1:  # tile 1 above tile 2
+            b1 = tile_1.border(2)
+            b2 = tile_2.border(0)
+        elif y1 == y2 - 1:  # tile 2 above tile 1
+            b1 = tile_1.border(0)
+            b2 = tile_2.border(2)
+    if b1:
+        # log(f"checking borders {b1} and {b2}")
+        return b1 == b2
+    else:
+        raise Exception("Tried to match non-touching spots. (1)")
 
 
 class MegaTile:
-    def __init__(self, size=3):
-        self.size = size
-        self.tiles = [[None] * size] * size
+    def __init__(self, *tiles):
+        self.tiles = {}
+        while len(tiles):
+            redos = []
+            for tile in tiles:
+                log(f"Working on tile {tile.name}")
+                if not self.add(tile):
+                    redos.append(tile)
+            tiles = redos
 
-    def validate(self):
-        for row in self.tiles:
-            if not match_horiz(row):
-                return False
-        for col in range(self.size):
-            if not match_vert(row[col] for row in self.tiles):
-                return False
+    def add(self, tile):
+        used_spots = self.tiles.keys()
+        if not used_spots:  # Special case adding first tile at 0, 0
+            self.tiles[(0, 0)] = tile
+            return True
+        open_spots = set(
+            neighbor
+            for used_spot in used_spots
+            for neighbor in touching(used_spot)
+            if neighbor not in used_spots
+        )
+        log(f"used spots: {used_spots} -- open spots: {open_spots}")
+        spot = None
+        for spot in open_spots:
+            log(f"trying open spot {spot} with Tile {tile.name}")
+            self.tiles[spot] = tile
+            for _ in range(8):
+                log(f"Testing position {_}")
+                if self.valid():
+                    log(f"VALID!!")
+                    break
+                else:
+                    tile.mutate()
+            else:
+                log(f"No match, deleting {tile.name} from {spot}")
+                del self.tiles[spot]
+            if spot in self.tiles:
+                log("Tile wasn't removed because must be valid; stop trying positions.")
+                break
+        # confirm no bugs...
+        if spot in self.tiles and self.tiles[spot] == tile:
+            log(f"Added tile {tile.name} to spot {spot}.")
+            return True
+        else:
+            log(f"FAILED adding tile {tile.name}")
+            return False
+
+    def valid(self):
+        used_spots = self.tiles.keys()
+        checked_pairs = set()
+        for spot, tile in self.tiles.items():
+            for neighboring_spot in touching(spot):
+                pair = tuple(sorted((spot, neighboring_spot)))
+                if neighboring_spot in used_spots and pair not in checked_pairs:
+                    if match(
+                        spot, tile, neighboring_spot, self.tiles[neighboring_spot]
+                    ):
+                        checked_pairs.add(pair)
+                    else:
+                        return False
         return True
 
-    def set(self, pos, tile):
-        col = pos % self.size
-        row = (pos - col) // self.size
-        self.tiles[row][col] = tile
-
-    # def get(self, pos):
-    #     col = pos % self.size
-    #     row = (pos - col) // self.size
-    #     return self.tiles[row][col]
-
-    def test(self, pos):
-        col = pos % self.size
-        row = (pos - col) // self.size
-        tile = self.tiles[row][col]
-        mutations = 0
-        while not self.validate() and mutations < 8:
-            if mutations < 4: ## TODO?
-                tile.rotate()
-                mutations += 1
-            elif mutations == 4:
-                tile.rotate()
-                tile.flip()
-                mutations += 1
-            else:
-                tile.rotate()
-                mutations += 1
-        return self.validate()
+    def __str__(self):
+        result = ""
+        tiles = list(
+            tile
+            for spot, tile in sorted(
+                self.tiles.items(), key=lambda kv: (-kv[0][1], kv[0][0])
+            )
+        )
+        rows = int(len(tiles) ** 0.5)
+        for x in range(rows):
+            for y in range(len(tiles[0].content)):
+                if y == 0 or y + 1 == len(tiles[0].content):
+                    continue
+                for tile in tiles[x * rows : (x + 1) * rows]:
+                    result += tile.content[y][1:-1]
+                result += "\n"
+        return result
 
     def print(self):
-        print(repr(self.tiles))
-        print_puzzle(t for row in self.tiles for t in row)
+        tiles = list(
+            tile
+            for spot, tile in sorted(
+                self.tiles.items(), key=lambda kv: (-kv[0][1], kv[0][0])
+            )
+        )
+        print_puzzle(tiles)
 
 
 # Data
@@ -2077,7 +2161,17 @@ Tile 1787:
 
 
 if __name__ == "__main__":
+
+    def main(part=None):
+        if not part or part == 1:
+            part_one()
+        if not part or part == 2:
+            part_two()
+
     doctest.testmod(verbose=False)
-    if len(sys.argv) > 1 and sys.argv[1] in ("-v", "--verbose"):
-        logging.basicConfig(level=logging.DEBUG)
-    main()
+    if len(sys.argv) > 1:
+        if len(sys.argv) > 2 and sys.argv[2] in ("-v", "--verbose"):
+            logging.basicConfig(format="%(message)s", level=logging.DEBUG)
+        main(part=int(sys.argv[1]))
+    else:
+        main()()
